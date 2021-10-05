@@ -17,12 +17,15 @@ public class Utility {
     public static boolean handleProvinceResponse(String response) {
         if (!TextUtils.isEmpty(response)) {
             try {
+                //将服务器返回的数据传入到JSONArray对象中
                 JSONArray allProvinces = new JSONArray(response);
                 for (int i = 0; i < allProvinces.length(); i++) {
+                    //从中取出的每一个JSONObject对象，并调用getString方法将这些数据取出
                     JSONObject provinceObject = allProvinces.getJSONObject(i);
                     Province province = new Province();
                     province.setProvinceName(provinceObject.getString("name"));
                     province.setProvinceCode(provinceObject.getInt("id"));
+                    //将数据存储到数据库
                     province.save();
                 }
                 return true;

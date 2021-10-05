@@ -22,7 +22,8 @@ import com.example.coolweather.db.Province;
 import com.example.coolweather.util.HttpUtil;
 import com.example.coolweather.util.Utility;
 
-import org.litepal.crud.DataSupport;
+import org.litepal.LitePal;
+import org.litepal.crud.LitePalSupport;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -81,7 +82,7 @@ public class choose_AreaFragment extends Fragment {
      */
     private int currentLevel;
 
-
+//获取到一些控件的实例，然后初始化了ArrayAdapter,并将其设置为ListView的适配器
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -94,6 +95,7 @@ public class choose_AreaFragment extends Fragment {
         return view;
     }
 
+    //给ListView和Button设置了点击事件
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -119,6 +121,7 @@ public class choose_AreaFragment extends Fragment {
                 }
             }
         });
+        //从这里开始加载省级数据
         queryProvinces();
     }
 
@@ -128,16 +131,19 @@ public class choose_AreaFragment extends Fragment {
     private void queryProvinces() {
         titleText.setText("中国");
         backButton.setVisibility(View.GONE);
-        provinceList = DataSupport.findAll(Province.class);
+        //调用LitePal的查询接口来从数据库中读取省级数据
+        provinceList = LitePal.findAll(Province.class);
         if (provinceList.size() > 0) {
             dataList.clear();
             for (Province province : provinceList) {
                 dataList.add(province.getProvinceName());
             }
+            //如果读取到了就直接将数据显示到界面上
             adapter.notifyDataSetChanged();
             listView.setSelection(0);
             currentLevel = LEVEL_PROVINCE;
         } else {
+            //如果没读取到，就从接口中组装出一个请求地址，然后调用queryFromServer()方法来从服务器上查询数据
             String address = "http://guolin.tech/api/china";
             queryFromServer(address, "province");
         }
@@ -149,7 +155,7 @@ public class choose_AreaFragment extends Fragment {
     private void queryCities() {
         titleText.setText(selectedProvince.getProvinceName());
         backButton.setVisibility(View.VISIBLE);
-        cityList = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
+        cityList = LitePal.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
         if (cityList.size() > 0) {
             dataList.clear();
             for (City city : cityList) {
@@ -171,7 +177,7 @@ public class choose_AreaFragment extends Fragment {
     private void queryCounties() {
         titleText.setText(selectedCity.getCityName());
         backButton.setVisibility(View.VISIBLE);
-        countyList = DataSupport.where("cityid = ?", String.valueOf(selectedCity.getId())).find(County.class);
+        countyList = LitePal.where("cityid = ?", String.valueOf(selectedCity.getId())).find(County.class);
         if (countyList.size() > 0) {
             dataList.clear();
             for (County county : countyList) {
@@ -193,11 +199,14 @@ public class choose_AreaFragment extends Fragment {
      */
     private void queryFromServer(String address, final String type) {
         showProgressDialog();
+        //调用HttpUtil的sendOkHttpRequest()方法来向服务器发送请求
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
+                //得到服务器返回的具体内容
                 String responseText = response.body().string();
                 boolean result = false;
+                //调用Utility.handleProvinceResponse()方法来解析和处理服务器返回的数据，并存储到数据库中
                 if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
                 } else if ("city".equals(type)) {
@@ -205,8 +214,11 @@ public class choose_AreaFragment extends Fragment {
                 } else if ("county".equals(type)) {
                     result = Utility.handleCountyResponse(responseText, selectedCity.getId());
                 }
+                //
                 if (result) {
+                    //UI操作必须要在主线程中调用，runOnUiThread()方法实现从子线程切换到了主线程
                     getActivity().runOnUiThread(new Runnable() {
+                        //现在数据库已有数据，调用queryProvinces();就会直接将数据显示到界面上
                         @Override
                         public void run() {
                             closeProgressDialog();
@@ -224,6 +236,7 @@ public class choose_AreaFragment extends Fragment {
 
             @Override
             public void onFailure(Call call, IOException e) {
+                //在这里对异常情况进行处理
                 // 通过runOnUiThread()方法回到主线程处理逻辑
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
