@@ -6,6 +6,7 @@ import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -26,6 +27,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.example.coolweather.gson.Forecast;
 import com.example.coolweather.gson.Weather;
+import com.example.coolweather.service.AutoUpdateService;
 import com.example.coolweather.util.HttpUtil;
 import com.example.coolweather.util.Utility;
 
@@ -103,6 +105,9 @@ public class WeatherActivity extends AppCompatActivity {
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
             mWeatherId=weather.basic.weatherId;//记住城市的天气id
+            //直接将界面显示出来
+            //疑惑：showWeatherInfo中会有后台服务，而后台服务中最后才有有更新数据缓存，而为什么
+            //最后他还会将更新好的缓存数据显示到界面上
             showWeatherInfo(weather);
         }else {
             //无缓存时去服务器查询天气(获取从choose_AreaFragment传来的weatherId)
@@ -221,6 +226,8 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
+        Intent intent=new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 
 /*
@@ -252,6 +259,7 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
     }
+    //显示透明栏
     public static void makeStatusBarTransparent(Activity activity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
             return;
